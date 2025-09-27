@@ -35,7 +35,7 @@ sns_format = st.sidebar.text_area(
     value="【新しい予定】\n{予定日} - {概要}\n{詳細}\n#予定 #スケジュール"
 )
 
-# --- 予定追加 ---
+# --- 予定追加フォーム ---
 with st.form("予定追加フォーム"):
     event_date = st.date_input("予定日")
     summary = st.text_input("概要")
@@ -55,8 +55,26 @@ with st.form("予定追加フォーム"):
         st.success("予定を追加しました！")
         st.text_area("SNS投稿用テキスト（コピーして使ってください）", sns_text, height=100)
 
-# --- DataFrame 編集可能表示 ---
+# --- 編集可能 DataFrame 表示 ---
 st.write("### スケジュール一覧（編集可）")
 edited_df = st.data_editor(schedule_df, num_rows="dynamic")
 
-i
+# --- 編集後の状態で CSV 保存 ---
+if st.button("変更を保存"):
+    edited_df["更新日"] = datetime.now().strftime("%Y-%m-%d %H:%M")  # 保存時に更新日を変更
+    edited_df.to_csv(FILE_PATH, index=False)
+    st.success("変更を保存しました！")
+
+# --- カレンダー表示 ---
+if not edited_df.empty:
+    edited_df["予定日"] = pd.to_datetime(edited_df["予定日"])
+    fig = px.timeline(
+        edited_df,
+        x_start="予定日",
+        x_end="予定日",
+        y="概要",
+        hover_data=["詳細", "更新日"],
+        title="予定カレンダー"
+    )
+    fig.update_yaxes(autorange="reversed")
+    st.plotly_chart(fig, use_container_width=True)
