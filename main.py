@@ -24,6 +24,10 @@ FILE_PATH = "schedule.csv"
 # CSV 読み込み or 空 DataFrame 作成
 if os.path.exists(FILE_PATH):
     schedule_df = pd.read_csv(FILE_PATH)
+    # 不要列があれば削除
+    for col in ['time', 'event']:
+        if col in schedule_df.columns:
+            schedule_df.drop(columns=col, inplace=True)
 else:
     schedule_df = pd.DataFrame(columns=["予定日", "更新日", "概要", "詳細"])
 
@@ -61,17 +65,18 @@ edited_df = st.data_editor(schedule_df, num_rows="dynamic")
 
 # --- 編集後の状態で CSV 保存 ---
 if st.button("変更を保存"):
-    edited_df["更新日"] = datetime.now().strftime("%Y-%m-%d %H:%M")  # 保存時に更新日を変更
+    edited_df["更新日"] = datetime.now().strftime("%Y-%m-%d %H:%M")  # 保存時に更新日を更新
     edited_df.to_csv(FILE_PATH, index=False)
     st.success("変更を保存しました！")
 
 # --- カレンダー表示 ---
 if not edited_df.empty:
     edited_df["予定日"] = pd.to_datetime(edited_df["予定日"])
+    edited_df["終了日"] = edited_df["予定日"] + pd.Timedelta(days=1)  # 1日イベント
     fig = px.timeline(
         edited_df,
         x_start="予定日",
-        x_end="予定日",
+        x_end="終了日",
         y="概要",
         hover_data=["詳細", "更新日"],
         title="予定カレンダー"
