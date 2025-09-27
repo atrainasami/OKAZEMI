@@ -4,35 +4,29 @@ import pandas as pd
 import os
 
 # --- パスワード判定 ---
-# Cloud 上の Secret だけを参照
 APP_PASSWORD = st.secrets["APP_PASSWORD"]
 
 password = st.text_input("パスワード:", type="password")
-
-# 入力が空のときは待機
 if not password:
     st.info("パスワードを入力してください")
     st.stop()
-
-# パスワードが違う場合
 if password != APP_PASSWORD:
     st.warning("パスワードが違います")
     st.stop()
 
-# ログイン成功
 st.success("ログイン成功！")
 st.title("仲間内スケジュール管理")
 
-# --- CSV 保存用ファイル ---
+# --- CSV ファイルパス ---
 FILE_PATH = "schedule.csv"
 
-# ファイルがあれば読み込み、なければ空の DataFrame を作成
+# CSV 読み込み or 空 DataFrame 作成
 if os.path.exists(FILE_PATH):
     schedule_df = pd.read_csv(FILE_PATH)
 else:
     schedule_df = pd.DataFrame(columns=["time", "event"])
 
-# --- SNS 出力フォーマット設定 ---
+# --- SNS フォーマット設定 ---
 st.sidebar.header("SNS出力フォーマット")
 st.sidebar.write("使える変数: {time}, {event}")
 sns_format = st.sidebar.text_area(
@@ -40,21 +34,25 @@ sns_format = st.sidebar.text_area(
     value="【新しい予定】\n{time} - {event}\n#予定 #スケジュール"
 )
 
-# --- 予定入力 ---
+# --- 予定追加 ---
 event = st.text_input("予定を入力してください")
-if st.button("追加") and event.strip():  # 空白は追加しない
+if st.button("追加") and event.strip():
     new_event = {
         "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
         "event": event
     }
     schedule_df = pd.concat([schedule_df, pd.DataFrame([new_event])], ignore_index=True)
-    schedule_df.to_csv(FILE_PATH, index=False)  # ローカルに保存
+    schedule_df.to_csv(FILE_PATH, index=False)
 
     sns_text = sns_format.format(**new_event)
     st.success("予定を追加しました！")
     st.text_area("SNS投稿用テキスト（コピーして使ってください）", sns_text, height=100)
 
-# --- 予定一覧表示 ---
-if not schedule_df.empty:
-    st.write("### スケジュール一覧")
-    st.table(schedule_df)
+# --- DataFrame 編集可能に表示 ---
+st.write("### スケジュール一覧（編集可）")
+edited_df = st.data_editor(schedule_df, num_rows="dynamic")
+
+# 編集結果を CSV に反映
+if st.button("変更を保存"):
+    edited_df.to_csv(FILE_PATH, index=False)
+    st.success("変更を保存しました！")
