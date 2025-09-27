@@ -4,10 +4,8 @@ import pandas as pd
 import os
 
 # --- パスワード判定 ---
-try:
-    APP_PASSWORD = st.secrets["APP_PASSWORD"]  # Cloud 上の Secret
-except (KeyError, AttributeError):
-    APP_PASSWORD = "ローカル用パスワード"       # ローカル実行用
+# Cloud 上の Secret だけを参照
+APP_PASSWORD = st.secrets["APP_PASSWORD"]
 
 password = st.text_input("パスワード:", type="password")
 
