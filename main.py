@@ -3,23 +3,38 @@ from datetime import datetime
 import pandas as pd
 import os
 
-# --- ログイン処理（簡易版） ---
+# --- パスワード判定 ---
+try:
+    APP_PASSWORD = st.secrets["APP_PASSWORD"]  # Cloud 上の Secret
+except (KeyError, AttributeError):
+    APP_PASSWORD = "ローカル用パスワード"       # ローカル実行用
+
 password = st.text_input("パスワード:", type="password")
-if password != st.secrets["APP_PASSWORD"]:
+
+# 入力が空のときは待機
+if not password:
+    st.info("パスワードを入力してください")
     st.stop()
 
+# パスワードが違う場合
+if password != APP_PASSWORD:
+    st.warning("パスワードが違います")
+    st.stop()
+
+# ログイン成功
+st.success("ログイン成功！")
 st.title("仲間内スケジュール管理")
 
-# --- 保存用ファイル ---
+# --- CSV 保存用ファイル ---
 FILE_PATH = "schedule.csv"
 
-# ファイルがあれば読み込み、なければ空のDataFrameを用意
+# ファイルがあれば読み込み、なければ空の DataFrame を作成
 if os.path.exists(FILE_PATH):
     schedule_df = pd.read_csv(FILE_PATH)
 else:
     schedule_df = pd.DataFrame(columns=["time", "event"])
 
-# --- SNSフォーマット設定 ---
+# --- SNS 出力フォーマット設定 ---
 st.sidebar.header("SNS出力フォーマット")
 st.sidebar.write("使える変数: {time}, {event}")
 sns_format = st.sidebar.text_area(
@@ -29,10 +44,13 @@ sns_format = st.sidebar.text_area(
 
 # --- 予定入力 ---
 event = st.text_input("予定を入力してください")
-if st.button("追加"):
-    new_event = {"event": event, "time": datetime.now().strftime("%Y-%m-%d %H:%M")}
+if st.button("追加") and event.strip():  # 空白は追加しない
+    new_event = {
+        "time": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "event": event
+    }
     schedule_df = pd.concat([schedule_df, pd.DataFrame([new_event])], ignore_index=True)
-    schedule_df.to_csv(FILE_PATH, index=False)
+    schedule_df.to_csv(FILE_PATH, index=False)  # ローカルに保存
 
     sns_text = sns_format.format(**new_event)
     st.success("予定を追加しました！")
